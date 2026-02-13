@@ -7,12 +7,12 @@ from groq import Groq
 
 load_dotenv()
 
-MODEL_NAME = "llama-3.3-70b-versatile" #"meta-llama/llama-4-scout-17b-16e-instruct" 
+MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct" #"meta-llama/llama-4-scout-17b-16e-instruct" "llama-3.3-70b-versatile" 
 
 EXPECTED_OUTPUT = {
     "assignments": [
         {
-            "employee": "Candy Paras",
+            "employee": "staff_1",
             "tasks": {
                 "07:00": "Floor_2",
                 "08:00": "Floor_2",
@@ -25,7 +25,7 @@ EXPECTED_OUTPUT = {
             },
         },
         {
-            "employee": "Melany Vivar Tranquilo",
+            "employee": "staff_2",
             "tasks": {
                 "07:00": "Floor_2",
                 "08:00": "Floor_2",
@@ -38,7 +38,7 @@ EXPECTED_OUTPUT = {
             },
         },
         {
-            "employee": "Olasunkanmi Akinmuyipitan",
+            "employee": "staff_3",
             "tasks": {
                 "07:00": "Floor_0",
                 "08:00": "Floor_0",
@@ -51,7 +51,7 @@ EXPECTED_OUTPUT = {
             },
         },
         {
-            "employee": "Raquel Eus\u00e9bio",
+            "employee": "staff_4",
             "tasks": {
                 "07:00": "Floor_1",
                 "08:00": "Floor_1",
@@ -64,7 +64,7 @@ EXPECTED_OUTPUT = {
             },
         },
         {
-            "employee": "Shinde Gaikwad",
+            "employee": "staff_5",
             "tasks": {
                 "07:00": "Floor_-1",
                 "08:00": "Floor_3",
@@ -76,19 +76,7 @@ EXPECTED_OUTPUT = {
                 "14:00": "Restroom_2",
             },
         },
-        {
-            "employee": "Shivahari Giri",
-            "tasks": {
-                "07:00": "Floor_4",
-                "08:00": "Floor_5",
-                "09:00": "Outdoor - SideHallway",
-                "10:00": "Float_0",
-                "11:00": "Restroom_2",
-                "12:00": "Break",
-                "13:00": "Outdoor-ALL",
-                "14:00": "Restroom_4",
-            },
-        },
+        
     ]
 }
 
@@ -182,7 +170,7 @@ def get_completion(prompt: str, system_prompt: str = "", prefill: str = "") -> s
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=messages,
-        temperature=0.0,
+        temperature=0.8,
         max_tokens=2000,
     )
 
