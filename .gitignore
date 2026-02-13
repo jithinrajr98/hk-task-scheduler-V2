@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+.env
+*.ipynb
+.DS_Store
+.pytest_cache/
+.playwright-mcp/
+screenshots/

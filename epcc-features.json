@@ -1,0 +1,177 @@
+{
+  "_warning": "Feature definitions are IMMUTABLE. Only 'passes' and 'status' fields may be modified. IT IS CATASTROPHIC TO REMOVE OR EDIT FEATURE DEFINITIONS.",
+  "_planApproved": true,
+  "_planApprovedAt": "2026-02-13T10:30:00Z",
+  "project": "HK Task Scheduler V2",
+  "created": "2026-02-13T00:00:00Z",
+  "lastUpdated": "2026-02-13T11:00:00Z",
+  "source": "PRD.md",
+  "features": [
+    {
+      "id": "F001",
+      "name": "File Upload",
+      "description": "Accept Excel (.xlsx) and CSV (.csv) staff schedule uploads, parse into structured format, validate file structure",
+      "priority": "P0",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 1,
+      "dependencies": [],
+      "estimatedHours": 1,
+      "planReference": "EPCC_PLAN.md#phase-1-core-backend",
+      "acceptanceCriteria": [
+        "App accepts .xlsx and .csv file uploads via Streamlit file uploader",
+        "Parsed data contains name, day, shift_name, start_time, end_time fields",
+        "Invalid files show clear error message"
+      ],
+      "subtasks": [
+        {"name": "Create prompt.py with get_completion and prompt variables", "status": "completed", "estimatedHours": 1},
+        {"name": "Add file uploader and pandas parsing in app.py", "status": "completed", "estimatedHours": 0.5},
+        {"name": "Add fallback to bundled staff_schedule.json", "status": "completed", "estimatedHours": 0.5}
+      ],
+      "source": "PRD.md#must-have-p0"
+    },
+    {
+      "id": "F002",
+      "name": "Day Selection",
+      "description": "Dropdown to select day of week, filter staff to shift_1 on selected day, show available staff count",
+      "priority": "P0",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 2,
+      "dependencies": ["F001"],
+      "estimatedHours": 0.5,
+      "planReference": "EPCC_PLAN.md#phase-1-core-backend",
+      "acceptanceCriteria": [
+        "Dropdown lists Monday through Sunday",
+        "Selecting a day filters staff_schedule to shift_1 entries for that day",
+        "Available staff count displayed to user"
+      ],
+      "subtasks": [
+        {"name": "Add day dropdown and shift_1 filtering", "status": "completed", "estimatedHours": 0.5}
+      ],
+      "source": "PRD.md#must-have-p0"
+    },
+    {
+      "id": "F003",
+      "name": "LLM Schedule Generation",
+      "description": "Use exact prompt from hk_prompt.ipynb with get_completion() function, call Groq API, parse JSON response",
+      "priority": "P0",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 3,
+      "dependencies": ["F001", "F002"],
+      "estimatedHours": 1,
+      "planReference": "EPCC_PLAN.md#phase-2-generation-display",
+      "acceptanceCriteria": [
+        "Prompt assembled using exact variables from notebook (TASK_CONTEXT, TASK_DESCRIPTION, EXAMPLES, INPUT_DATA, CONSTRAINT, PRECOGNITION, OUTPUT_FORMATTING)",
+        "get_completion() function reused/improved with env var API key and error handling",
+        "Groq API called with meta-llama/llama-4-scout-17b-16e-instruct model",
+        "JSON response parsed into list of employee assignments"
+      ],
+      "subtasks": [
+        {"name": "Wire generate button to prompt assembly and API call", "status": "completed", "estimatedHours": 0.5},
+        {"name": "Parse JSON from <response> tags", "status": "completed", "estimatedHours": 0.5}
+      ],
+      "source": "PRD.md#must-have-p0"
+    },
+    {
+      "id": "F004",
+      "name": "Timeline Grid Display",
+      "description": "Horizontal Gantt-chart style grid with employee rows, hourly columns (07-14), color-coded task blocks",
+      "priority": "P0",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 4,
+      "dependencies": ["F003"],
+      "estimatedHours": 1.5,
+      "planReference": "EPCC_PLAN.md#phase-2-generation-display",
+      "acceptanceCriteria": [
+        "Each employee displayed as a row with name and shift time",
+        "Columns represent hourly slots from 07:00 to 14:00",
+        "Task blocks rendered as colored rectangles with task name text",
+        "Colors differentiated by category (floors, restrooms, outdoor, egress, BOH, float, break)",
+        "Minimalistic design - no images or avatars"
+      ],
+      "subtasks": [
+        {"name": "Build timeline grid HTML/CSS using frontend-design skill", "status": "completed", "estimatedHours": 1.5}
+      ],
+      "source": "PRD.md#must-have-p0"
+    },
+    {
+      "id": "F005",
+      "name": "Constraint Validation Display",
+      "description": "Post-generation validation showing pass/fail per constraint rule",
+      "priority": "P0",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 5,
+      "dependencies": ["F003"],
+      "estimatedHours": 0.5,
+      "planReference": "EPCC_PLAN.md#phase-2-generation-display",
+      "acceptanceCriteria": [
+        "Validates no double-booking across simultaneous tasks",
+        "Validates Restroom_2 staffing (1-2, 2 from 14:00, max 2h/person)",
+        "Validates Restroom_4 staffing (exactly 1, max 2h/person)",
+        "Validates Egress (exactly 2, 10:00-12:00 only)",
+        "Validates BOH-Breakroom and BOH-Restrooms constraints",
+        "Displays clear pass/fail indicators per constraint"
+      ],
+      "subtasks": [
+        {"name": "Write constraint validation functions", "status": "completed", "estimatedHours": 0.5}
+      ],
+      "source": "PRD.md#must-have-p0"
+    },
+    {
+      "id": "F006",
+      "name": "Regenerate Button",
+      "description": "Allow re-running schedule generation if result is unsatisfactory",
+      "priority": "P1",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 3,
+      "dependencies": ["F003"],
+      "estimatedHours": 0.25,
+      "planReference": "EPCC_PLAN.md#phase-2-generation-display",
+      "acceptanceCriteria": [
+        "Button visible after schedule is generated",
+        "Clicking regenerates with same inputs but fresh LLM call"
+      ],
+      "subtasks": [],
+      "source": "PRD.md#should-have-p1"
+    },
+    {
+      "id": "F007",
+      "name": "Schedule Export",
+      "description": "Download generated schedule as CSV or printable format",
+      "priority": "P1",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-13T11:00:00Z",
+      "implementationOrder": 6,
+      "dependencies": ["F003"],
+      "estimatedHours": 0.5,
+      "planReference": "EPCC_PLAN.md#phase-3-polish-test",
+      "acceptanceCriteria": [
+        "Download button available after schedule generation",
+        "Exported file contains all employee assignments with time slots"
+      ],
+      "subtasks": [
+        {"name": "Add CSV download button", "status": "completed", "estimatedHours": 0.5}
+      ],
+      "source": "PRD.md#should-have-p1"
+    }
+  ],
+  "metrics": {
+    "total": 7,
+    "verified": 7,
+    "inProgress": 0,
+    "pending": 0,
+    "percentComplete": 100
+  }
+}
