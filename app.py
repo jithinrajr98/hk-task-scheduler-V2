@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from prompt import generate_schedule, parse_response
+from supabase_client import push_schedule, load_schedule
 
 # --- Data loading helpers ---
 
@@ -432,12 +433,26 @@ def main():
             try:
                 schedule = parse_uploaded_file(uploaded_file)
                 st.success(f"Loaded {len(schedule)} schedule entries")
+                try:
+                    push_schedule(schedule)
+                    st.success("Saved to Supabase")
+                except Exception as e:
+                    st.warning(f"Could not save to Supabase: {e}")
             except Exception as e:
                 st.error(f"Error parsing file: {e}")
                 schedule = None
         else:
-            schedule = load_bundled_schedule()
-            st.info("Using bundled schedule data")
+            # Try Supabase first, fall back to bundled JSON
+            schedule = None
+            try:
+                schedule = load_schedule()
+            except Exception:
+                pass
+            if schedule:
+                st.info("Loaded schedule from Supabase")
+            else:
+                schedule = load_bundled_schedule()
+                st.info("Using bundled schedule data")
 
         day = st.selectbox("Select day", DAYS, index=3)  # Default Thursday
 

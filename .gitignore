@@ -13,5 +13,6 @@ wheels/
 *.ipynb
 .DS_Store
 .pytest_cache/
+.streamlit/
 .playwright-mcp/
 screenshots/
