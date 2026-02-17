@@ -3,160 +3,208 @@ import os
 import re
 
 from dotenv import load_dotenv
-from groq import Groq
+from openai import OpenAI
 
 load_dotenv()
 
-MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct" #"meta-llama/llama-4-scout-17b-16e-instruct" "llama-3.3-70b-versatile" 
+MODEL_NAME = "meta-llama/Llama-3.3-70B-Instruct"
 
-EXPECTED_OUTPUT = {
+EXPECTED_OUTPUT = """{
     "assignments": [
         {
             "employee": "staff_1",
             "tasks": {
-                "07:00": "Floor_2",
-                "08:00": "Floor_2",
-                "09:00": "Outdoor - DP",
-                "10:00": "BOH-Breakroom",
-                "11:00": "Break",
-                "12:00": "Restroom_2",
-                "13:00": "Restroom_2",
-                "14:00": "Restroom_2",
-            },
+                "07:00": "Ground Floor",
+                "08:00": "Ground Floor",
+                "09:00": "Outdoor",
+                "10:00": "Egress",
+                "11:00": "Egress",
+                "12:00": "Break",
+                "13:00": "BOH-Restroom",
+                "14:00": "BOH-Restroom"
+            }
         },
         {
             "employee": "staff_2",
             "tasks": {
-                "07:00": "Floor_2",
-                "08:00": "Floor_2",
-                "09:00": "Outdoor - Hallway",
-                "10:00": "BOH-Restrooms",
-                "11:00": "Break",
-                "12:00": "Restroom_4",
-                "13:00": "Restroom_4",
-                "14:00": "Restroom_4",
-            },
+                "07:00": "First Floor",
+                "08:00": "First Floor",
+                "09:00": "Outdoor",
+                "10:00": "Egress",
+                "11:00": "Egress",
+                "12:00": "Break",
+                "13:00": "BOH-Breakroom",
+                "14:00": "BOH-Breakroom",
+           
+            }
         },
         {
             "employee": "staff_3",
             "tasks": {
-                "07:00": "Floor_0",
-                "08:00": "Floor_0",
-                "09:00": "Outdoor - SideHallway",
-                "10:00": "Egress",
-                "11:00": "Egress",
-                "12:00": "Break",
-                "13:00": "Float_1",
-                "14:00": "BOH-Breakroom",
-            },
+                "07:00": "Second Floor",
+                "08:00": "Second Floor",
+                "09:00": "Outdoor",
+                "10:00": "BOH-Restroom",
+                "11:00": "Break",
+                "12:00": "Restroom 2&4",
+                "13:00": "Restroom 2&4",
+                "14:00": "Float_TRELLO",
+            }
         },
         {
             "employee": "staff_4",
             "tasks": {
-                "07:00": "Floor_1",
-                "08:00": "Floor_1",
-                "09:00": "Outdoor - Main Gate",
-                "10:00": "Egress",
-                "11:00": "Egress",
-                "12:00": "Break",
-                "13:00": "Float_-1",
-                "14:00": "BOH-Restrooms",
-            },
+                "07:00": "Second Floor",
+                "08:00": "Second Floor",
+                "09:00": "Outdoor",
+                "10:00": "BOH-Breakroom",
+                "11:00": "Break",
+                "12:00": "Float_0",
+                "13:00": "Float_TRELLO",
+                "14:00": "Restroom 2&4",
+           
+            }
         },
         {
             "employee": "staff_5",
             "tasks": {
-                "07:00": "Floor_-1",
-                "08:00": "Floor_3",
-                "09:00": "Outdoor - DP",
-                "10:00": "Float_All",
-                "11:00": "Break",
-                "12:00": "Outdoor-ALL",
-                "13:00": "Float_0",
-                "14:00": "Restroom_2",
-            },
+                "07:00": "Lower Floor",
+                "08:00": "Third Floor",
+                "09:00": "Design Pavillon",
+                "10:00": "Float_TRELLO",
+                "11:00": "Float_TRELLO",
+                "12:00": "Break",
+                "13:00": "Outside",
+                "14:00": "Float_TRELLO",
+               
+            }
         },
-        
+        {
+            "employee": "staff_6",
+            "tasks": {
+              
+                "13:00": "Float_0",
+                "14:00": "Float_1",
+                "15:00": "Outside",
+                "16:00": "Break",
+                "17:00": "FLoat_-1",
+                "18:00": "Restroom 2",
+                "19:00": "Restroom 2",
+                "20:00": "Float_TRELLO"
+            }
+        },
+        {
+            "employee": "staff_7",
+            "tasks": {
+         
+                "13:00": "Float_TRELLO",
+                "14:00": "Egress",
+                "15:00": "Outside",
+                "16:00": "Break",
+                "17:00": "Restroom 2",
+                "18:00": "Restroom",
+                "19:00": "BOH-Restroom",
+                "20:00": "Trash Removal",
+              
+            }
+        },
+        {
+            "employee": "staff_8",
+            "tasks": {
+              
+                "15:00": "Restroom 2",
+                "16:00": "Restroom 2",
+                "17:00": "BOH-Restroom",
+                "18:00": "BOH-Breakroom",
+                "19:00": "Break",
+                "20:00": "Trash Removal",
+                "21:00": "Restroom 2&4",
+                "22:00": "Restroom 2&4",
+                "23:00": "Restroom 2&4"
+            }
+        }
     ]
 }
+"""
 
-TASK_CONTEXT = "You are an expert task planner. Your goal is to create daily employee schedules"
 
+TASK_CONTEXT = """You are an operations planning AI specialized in workforce scheduling.
+
+Your objective is to generate a valid daily housekeeping schedule for a luxury furniture gallery. 
+All hard constraints must be satisfied. If constraints conflict, prioritize them according to the defined priority order.
+"""
 TASK_DESCRIPTION = """
-Create a daily housekeeping schedule for a luxury furniture gallery with these specifications:
+Create a daily housekeeping schedule for a luxury furniture gallery.
 
-GALLERY LAYOUT:
-- Floor_-1, 0, 1: Furniture showrooms
-- Floor_2: Restaurant + 4 customer restrooms
-- Floor_3: Bar
-- Floor_4: Small restaurant + 2 customer restrooms
-- Floor_5: Rooftop lounge
+LAYOUT:
+- Floor -1, 0, 1: Showrooms
+- Floor 2: Restaurant + 4 restrooms
+- Floor 3: Bar
+- Floor 4: Small restaurant + 2 restrooms
+- Floor 5: Rooftop lounge
 
-STAFF:
-- Team size: 11-20 people (varies daily)
-- Each staff has 2 days off per week
-- Shift: 7:00-15:00 with 1-hour break (between 11:00-13:00)
+SHIFTS (team size 11-20 daily, 2 days off/week each):
+- Shift 1: 07:00-15:00 | Break 1h within 11:00-13:00
+- Shift 2: 13:00-21:00 | Break 1h within 17:00-19:00
+- Shift 3: 15:00-23:00 | Break 1h within 19:00-20:00
+- Stagger breaks — max half the shift on break at once
 
-OPENING DUTIES (7:00-10:00 - mandatory daily):
-7:00-9:00:
-- Floor_-1: 1 person (7:00-8:00 only, then moves to Floor_3 8:00-9:00)
-- Floor_0: Min 1 person, max 2
-- Floor_1: Min 1 person, max 2
-- Floor_2: 2 people (mandatory)
-- Floor_4: Min 1 person, max 2
+OPENING (07:00-10:00, Shift 1 only):
 
-9:00-10:00 (Outdoor tasks - all staff):
-- Assign at least 1 person per area: Outdoor DP, Outdoor Hallway, Outdoor SideHallway, Outdoor Main Gate
+  07:00-09:00 Indoor Clean:
+    Floor -1 → 1 person (07-08 only, moves to Floor 3 at 08-09)
+    Floor  0 → 1-2 people
+    Floor  1 → 1-2 people
+    Floor  2 → 2 people (mandatory)
+    Floor  4 → 1-2 people
 
-REGULAR TASKS:
-- Egress (10:00-12:00): 2 people mandatory, break 12:00-13:00
-- BOH-Breakroom: 1 person, 10:00-11:00 & 14:00-15:00, break 11:00-12:00
-- BOH-Restrooms: 1 person, 10:00-11:00 & 14:00-15:00, break 11:00-12:00
-- Restroom_2: Min 1 person always, 2 people from 14:00
-- Restroom_4:  1 person always
-- Float_ALL: 1 person for 1h between 11:00-15:00
-- Float_0: 1 person for 1h between 11:00-15:00
-- Float_1: 1 person for 1h between 11:00-15:00
-- Float_-1: 1 person for 1h between 11:00-15:00
+  09:00-10:00 Outdoor (all Shift 1 staff):
+    1 each → Outdoor DP, Hallway, Side Hallway, Main Gate
+    1 → Design Pavilion
 
-CONSTRAINT:
-strictly enforce following constraints
-- No double-booking staff across simultaneous tasks
-- Restroom_2: min 1 person, max 2 people at all times; 2 people mandatory from 14:00; Max hours per person is 2
-- Restroom_4: exactly 1 person at all times; Max hours per person is 2
+REGULAR TASKS (10:00+):
 
-- Egress: exactly 2 people (10:00-12:00 only)
-- BOH-Breakroom: exactly 1 person, only at 10:00-11:00 and 14:00-15:00
-- BOH-Restrooms: exactly 1 person, only at 10:00-11:00 and 14:00-15:00
+  Egress           → 2 people 10:00-12:00 | 1 person 15:00-16:00
+  BOH-Breakroom    → 1 person at 10-11, 14-15, 17-18
+  BOH-Restrooms    → 1 person at 10-11, 14-15, 17-18
+  Restroom 2       → 1 person from 12:00 | 2 people from 14:00 (max 2 always)
+  Restroom 4       → 1 person at all times
 
+  Float (1 person each, 1h block, 11:00-17:00):
+    Float_TRELLO, Float_0, Float_1, Float_-1
+
+  Outdoor (recurring every 2h: 11:00, 13:00, 15:00):
+    1-2 people per block | max 3 outdoors at any time
 """
 
 CONSTRAINT = """
-Strictly enforce the following when creating the schedule:
+RULES:
+1. No double-booking — one person, one task at a time
+2. Staff only work within their shift hours minus break
+3. Shift 2/3 unavailable for opening duties
 
-- No double-booking staff across simultaneous tasks
-- Restroom_2: min 1 person, max 2 people at all times; 2 people mandatory from 14:00
-- Restroom_4: exactly 1 person at all times
-- Egress: exactly 2 people (10:00-12:00 only)
-- BOH-Breakroom: exactly 1 person, only at 10:00-11:00 and 14:00-15:00
-- BOH-Restrooms: exactly 1 person, only at 10:00-11:00 and 14:00-15:00
-- Extra staffs: assign to Float_ALL or Float_0 tasks (1h each, 11:00-15:00)
+STAFFING LIMITS:
+4. Restroom 2: 1-2 people from 12:00; exactly 2 from 14:00; max 2h per person
+5. Restroom 4: exactly 1 at all times; max 2h per person
+6. Egress: 2 people (10-12), 1 person (15-16)
+7. BOH-Breakroom: 1 person at 10-11, 14-15, 17-18 only
+8. BOH-Restrooms: 1 person at 10-11, 14-15, 17-18 only
+9. Outdoor: max 3 people at any time
+10. Float tasks: 1 person per task, 1h each
+
+OVERFLOW:
+11. Unassigned staff → Float_TRELLO, Float_0, or Outdoor (1h blocks, 11-15)
 """
 
-PRECOGNITION = """
-Think through the problem before responding.
-- Use <scratchpad></scratchpad> tags to gather and organize relevant information.
-"""
-
-PREFILL = "<response>"
-
-
-def get_completion(prompt: str, system_prompt: str = "", prefill: str = "") -> str:
-    api_key = os.environ.get("GROQ_API_KEY")
+def get_completion(prompt: str, system_prompt: str = "") -> str:
+    api_key = os.environ.get("HF_TOKEN")
     if not api_key:
-        raise ValueError("GROQ_API_KEY environment variable not set")
+        raise ValueError("HF_TOKEN environment variable not set")
 
-    client = Groq(api_key=api_key)
+    client = OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=api_key,
+    )
     messages = []
 
     if system_prompt:
@@ -164,17 +212,14 @@ def get_completion(prompt: str, system_prompt: str = "", prefill: str = "") -> s
 
     messages.append({"role": "user", "content": prompt})
 
-    if prefill:
-        messages.append({"role": "assistant", "content": prefill})
-
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=messages,
-        temperature=0.8,
-        max_tokens=2000,
+        temperature=0, 
+        max_tokens=20000
     )
 
-    return prefill + " " + response.choices[0].message.content
+    return response.choices[0].message.content
 
 
 def build_prompt(day_schedule: list[dict]) -> str:
@@ -182,7 +227,7 @@ def build_prompt(day_schedule: list[dict]) -> str:
 Use this example as a template for your output:
 
 <example>
-{json.dumps(EXPECTED_OUTPUT, indent=2)}
+{EXPECTED_OUTPUT}
 </example>
 """
 
@@ -194,7 +239,7 @@ Use this example as a template for your output:
 """
 
     output_formatting = f"""Put your response in <response></response> tags.
-    - response should follow the json format as {json.dumps(EXPECTED_OUTPUT)}
+    - response should follow the json format as the example above
 """
 
     question = "How do you respond to the user's question?"
@@ -205,18 +250,21 @@ Use this example as a template for your output:
     prompt += f"\n\n{input_data}"
     prompt += f"\n\n{question}"
     prompt += f"\n\n{CONSTRAINT}"
-    prompt += f"\n\n{PRECOGNITION}"
     prompt += f"\n\n{output_formatting}"
 
     return prompt
 
 
 def parse_response(response_text: str) -> dict | None:
-    match = re.search(r"<response>(.*?)</response>", response_text, re.DOTALL)
+    # Strip reasoning blocks from models (<think>, <scratchpad>, etc.)
+    cleaned = re.sub(r"<think>.*?</think>", "", response_text, flags=re.DOTALL)
+    cleaned = re.sub(r"<scratchpad>.*?</scratchpad>", "", cleaned, flags=re.DOTALL)
+
+    match = re.search(r"<response>(.*?)</response>", cleaned, re.DOTALL)
     if match:
         json_str = match.group(1).strip()
     else:
-        json_str = response_text.strip()
+        json_str = cleaned.strip()
 
     # Try to find JSON object in the text
     json_str = json_str.replace("'", '"')
@@ -231,7 +279,9 @@ def parse_response(response_text: str) -> dict | None:
         return None
 
 
-def generate_schedule(day_schedule: list[dict]) -> dict | None:
+def generate_schedule(day_schedule: list[dict]) -> tuple[dict | None, str]:
     prompt = build_prompt(day_schedule)
-    response = get_completion(prompt, prefill=PREFILL)
-    return parse_response(response)
+    response = get_completion(prompt)
+    return parse_response(response), response
+
+

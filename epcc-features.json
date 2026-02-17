@@ -4,7 +4,7 @@
   "_planApprovedAt": "2026-02-13T10:30:00Z",
   "project": "HK Task Scheduler V2",
   "created": "2026-02-13T00:00:00Z",
-  "lastUpdated": "2026-02-13T11:00:00Z",
+  "lastUpdated": "2026-02-17T00:00:00Z",
   "source": "PRD.md",
   "features": [
     {
@@ -165,11 +165,134 @@
         {"name": "Add CSV download button", "status": "completed", "estimatedHours": 0.5}
       ],
       "source": "PRD.md#should-have-p1"
+    },
+    {
+      "id": "F008",
+      "name": "Multi-Shift Staff Filtering",
+      "description": "Replace shift_1-only filtering with all-shifts-for-day filtering so shift_2 and shift_3 staff are included in schedule generation",
+      "priority": "P0",
+      "status": "completed",
+      "passes": true,
+      "verifiedAt": "2026-02-17T00:00:00Z",
+      "implementationOrder": 8,
+      "dependencies": ["F002"],
+      "estimatedHours": 0.5,
+      "planReference": "EPCC_PLAN.md#plan-add-shift-2--shift-3-support",
+      "acceptanceCriteria": [
+        "filter_by_day() returns all shifts for selected day (not just shift_1)",
+        "Sidebar metric shows total staff count across all shifts",
+        "All shifts' staff sent to LLM in single call"
+      ],
+      "subtasks": [
+        {"name": "Replace filter_shift1 with filter_by_day in app.py", "status": "completed", "estimatedHours": 0.15},
+        {"name": "Update sidebar labels and warning messages", "status": "completed", "estimatedHours": 0.1},
+        {"name": "Update test imports and assertions", "status": "completed", "estimatedHours": 0.25}
+      ],
+      "source": "EPCC_PLAN.md"
+    },
+    {
+      "id": "F009",
+      "name": "Full-Day Timeline (07:00-22:00)",
+      "description": "Expand timeline grid from 8 columns (07:00-14:00) to 16 columns (07:00-22:00) covering all shifts",
+      "priority": "P0",
+      "status": "completed",
+      "passes": true,
+      "verifiedAt": "2026-02-17T00:00:00Z",
+      "implementationOrder": 9,
+      "dependencies": ["F004"],
+      "estimatedHours": 0.25,
+      "planReference": "EPCC_PLAN.md#plan-add-shift-2--shift-3-support",
+      "acceptanceCriteria": [
+        "TIME_SLOTS spans 07:00 through 22:00 (16 columns)",
+        "Timeline grid renders all 16 hourly columns",
+        "Empty cells show hatched pattern for hours outside staff's shift"
+      ],
+      "subtasks": [
+        {"name": "Expand TIME_SLOTS constant", "status": "completed", "estimatedHours": 0.1},
+        {"name": "Verify grid rendering with extended columns", "status": "completed", "estimatedHours": 0.15}
+      ],
+      "source": "EPCC_PLAN.md"
+    },
+    {
+      "id": "F010",
+      "name": "Multi-Shift Constraint Validation",
+      "description": "Extend Restroom_2 and Restroom_4 constraint checks to cover full operating hours (10:00-22:00) dynamically",
+      "priority": "P0",
+      "status": "completed",
+      "passes": true,
+      "verifiedAt": "2026-02-17T00:00:00Z",
+      "implementationOrder": 10,
+      "dependencies": ["F005"],
+      "estimatedHours": 0.5,
+      "planReference": "EPCC_PLAN.md#plan-add-shift-2--shift-3-support",
+      "acceptanceCriteria": [
+        "Restroom_2 validated across 10:00-22:00 (dynamic from time_map)",
+        "Restroom_4 validated across 10:00-22:00 (dynamic from time_map)",
+        "Egress and BOH constraints unchanged (shift_1 specific)",
+        "Tests pass with multi-shift VALID_ASSIGNMENTS fixture"
+      ],
+      "subtasks": [
+        {"name": "Update Restroom_2 and Restroom_4 time ranges to dynamic", "status": "completed", "estimatedHours": 0.25},
+        {"name": "Add shift_2/shift_3 staff to test VALID_ASSIGNMENTS", "status": "completed", "estimatedHours": 0.25}
+      ],
+      "source": "EPCC_PLAN.md"
+    },
+    {
+      "id": "F011",
+      "name": "Prompt Bug Fixes for Multi-Shift",
+      "description": "Fix missing comma in EXPECTED_OUTPUT, remove double-encoding via json.dumps on string, increase max_tokens for larger responses",
+      "priority": "P0",
+      "status": "completed",
+      "passes": true,
+      "verifiedAt": "2026-02-17T00:00:00Z",
+      "implementationOrder": 7,
+      "dependencies": ["F003"],
+      "estimatedHours": 0.25,
+      "planReference": "EPCC_PLAN.md#plan-add-shift-2--shift-3-support",
+      "acceptanceCriteria": [
+        "Missing comma after '13:00: Outside' fixed in EXPECTED_OUTPUT",
+        "json.dumps() removed from EXPECTED_OUTPUT usage in build_prompt()",
+        "max_tokens increased from 2000 to 4000"
+      ],
+      "subtasks": [
+        {"name": "Fix missing comma in EXPECTED_OUTPUT", "status": "completed", "estimatedHours": 0.05},
+        {"name": "Remove json.dumps wrapping of string EXPECTED_OUTPUT", "status": "completed", "estimatedHours": 0.1},
+        {"name": "Increase max_tokens to 4000", "status": "completed", "estimatedHours": 0.05}
+      ],
+      "source": "EPCC_PLAN.md"
+    },
+    {
+      "id": "F012",
+      "name": "LLM Self-Correction via Second Pass",
+      "description": "When first LLM response fails constraint validation, automatically send failed schedule + specific failure reasons to a second LLM call (llama-3.3-70b-versatile) to fix mistakes",
+      "priority": "P1",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-17T12:00:00Z",
+      "implementationOrder": 12,
+      "dependencies": ["F003", "F005"],
+      "estimatedHours": 1.5,
+      "planReference": "EPCC_PLAN.md#plan-llm-self-correction",
+      "acceptanceCriteria": [
+        "Failed constraints trigger an automatic correction call",
+        "Correction prompt includes original schedule + specific failures",
+        "UI shows corrected result with validation re-run",
+        "If correction also fails, show result as-is (no infinite loop)",
+        "Pass 1 uses Maverick model, Pass 2 uses llama-3.3-70b-versatile"
+      ],
+      "subtasks": [
+        {"name": "Add build_correction_prompt() in prompt.py", "status": "completed", "estimatedHours": 0.5},
+        {"name": "Add correct_schedule() with model parameter support", "status": "completed", "estimatedHours": 0.25},
+        {"name": "Wire correction into app.py generation flow", "status": "completed", "estimatedHours": 0.33},
+        {"name": "Add test for correction prompt", "status": "completed", "estimatedHours": 0.25}
+      ],
+      "source": "EPCC_PLAN.md"
     }
   ],
   "metrics": {
-    "total": 7,
-    "verified": 7,
+    "total": 12,
+    "verified": 8,
+    "completed": 4,
     "inProgress": 0,
     "pending": 0,
     "percentComplete": 100

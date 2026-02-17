@@ -1,11 +1,11 @@
 import json
 import pytest
 
-from app import filter_shift1, get_task_color, validate_constraints, TASK_COLORS
+from app import filter_by_day, get_task_color, validate_constraints, TASK_COLORS
 from prompt import parse_response
 
 
-# --- filter_shift1 ---
+# --- filter_by_day ---
 
 SAMPLE_SCHEDULE = [
     {"name": "Alice", "day": "Monday", "shift_name": "shift_1", "start_time": "07:00", "end_time": "15:00"},
@@ -15,15 +15,14 @@ SAMPLE_SCHEDULE = [
 ]
 
 
-def test_filter_shift1_correct_day():
-    result = filter_shift1(SAMPLE_SCHEDULE, "Monday")
-    assert len(result) == 2
-    assert all(s["shift_name"] == "shift_1" for s in result)
-    assert {s["name"] for s in result} == {"Alice", "Carol"}
+def test_filter_by_day_correct_day():
+    result = filter_by_day(SAMPLE_SCHEDULE, "Monday")
+    assert len(result) == 3
+    assert {s["name"] for s in result} == {"Alice", "Bob", "Carol"}
 
 
-def test_filter_shift1_no_match():
-    result = filter_shift1(SAMPLE_SCHEDULE, "Sunday")
+def test_filter_by_day_no_match():
+    result = filter_by_day(SAMPLE_SCHEDULE, "Sunday")
     assert result == []
 
 
@@ -55,6 +54,13 @@ def test_parse_response_malformed():
     assert result is None
 
 
+def test_parse_response_with_think_tags():
+    text = '<response><think>Let me analyze {this} carefully...</think>{"assignments": [{"employee": "A", "tasks": {"07:00": "Floor_1"}}]}</response>'
+    result = parse_response(text)
+    assert result is not None
+    assert result["assignments"][0]["employee"] == "A"
+
+
 # --- validate_constraints ---
 
 VALID_ASSIGNMENTS = [
@@ -64,6 +70,9 @@ VALID_ASSIGNMENTS = [
     {"employee": "D", "tasks": {"07:00": "Floor_1", "08:00": "Floor_1", "09:00": "Outdoor - SideHallway", "10:00": "BOH-Restrooms", "11:00": "Break", "12:00": "Restroom_4", "13:00": "Restroom_4", "14:00": "Restroom_4"}},
     {"employee": "E", "tasks": {"07:00": "Floor_-1", "08:00": "Floor_3", "09:00": "Outdoor - DP", "10:00": "Float_All", "11:00": "Restroom_2", "12:00": "Break", "13:00": "Float_0", "14:00": "Restroom_2"}},
     {"employee": "F", "tasks": {"07:00": "Floor_4", "08:00": "Floor_4", "09:00": "Outdoor - SideHallway", "10:00": "Restroom_4", "11:00": "Break", "12:00": "Float_ALL", "13:00": "Restroom_2", "14:00": "Restroom_2"}},
+    {"employee": "G", "tasks": {"13:00": "Float_0", "14:00": "Float_1", "15:00": "Outside", "16:00": "Break", "17:00": "Float_-1", "18:00": "Restroom_2", "19:00": "Restroom_2", "20:00": "Float_TRELLO"}},
+    {"employee": "H", "tasks": {"15:00": "Restroom_2", "16:00": "Restroom_2", "17:00": "BOH-Restrooms", "18:00": "BOH-Breakroom", "19:00": "Break", "20:00": "Restroom_2", "21:00": "Restroom_2", "22:00": "Restroom_2"}},
+    {"employee": "I", "tasks": {"13:00": "Restroom_4", "14:00": "Restroom_4", "15:00": "Restroom_4", "16:00": "Restroom_4", "17:00": "Break", "18:00": "Restroom_4", "19:00": "Restroom_4", "20:00": "Restroom_4", "21:00": "Restroom_4", "22:00": "Restroom_4"}},
 ]
 
 
@@ -95,3 +104,4 @@ def test_task_color_mapping():
     assert get_task_color("Egress") == TASK_COLORS["Egress"]
     assert get_task_color("BOH-Breakroom") == TASK_COLORS["BOH"]
     assert get_task_color("Float_0") == TASK_COLORS["Float"]
+

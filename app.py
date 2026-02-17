@@ -28,7 +28,7 @@ TASK_COLORS = {
     "Break": "#CCCCCC",
 }
 
-TIME_SLOTS = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00"]
+TIME_SLOTS = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"]
 
 
 def normalize_shift(value):
@@ -82,8 +82,8 @@ def load_bundled_schedule() -> list[dict]:
         return json.load(f)
 
 
-def filter_shift1(schedule: list[dict], day: str) -> list[dict]:
-    return [s for s in schedule if s["day"] == day and s["shift_name"] == "shift_1"]
+def filter_by_day(schedule: list[dict], day: str) -> list[dict]:
+    return [s for s in schedule if s["day"] == day]
 
 
 def get_task_color(task: str) -> str:
@@ -129,12 +129,13 @@ def validate_constraints(assignments: list[dict]) -> list[dict]:
 
     # 2. Restroom_2: 1-2 people, 2 from 14:00
     r2_ok = True
-    for time in ["10:00", "11:00", "12:00", "13:00", "14:00"]:
+    r2_times = [t for t in time_map if "10:00" <= t <= "22:00"]
+    for time in r2_times:
         if time in time_map:
             count = sum(1 for t in time_map[time].values() if "Restroom_2" in t)
             if count < 1:
                 r2_ok = False
-            if time == "14:00" and count < 2:
+            if time >= "14:00" and count < 2:
                 r2_ok = False
             if count > 2:
                 r2_ok = False
@@ -142,7 +143,8 @@ def validate_constraints(assignments: list[dict]) -> list[dict]:
 
     # 3. Restroom_4: exactly 1
     r4_ok = True
-    for time in ["10:00", "11:00", "12:00", "13:00", "14:00"]:
+    r4_times = [t for t in time_map if "10:00" <= t <= "22:00"]
+    for time in r4_times:
         if time in time_map:
             count = sum(1 for t in time_map[time].values() if "Restroom_4" in t)
             if count != 1:
@@ -457,8 +459,8 @@ def main():
         day = st.selectbox("Select day", DAYS, index=3)  # Default Thursday
 
         if schedule:
-            day_staff = filter_shift1(schedule, day)
-            st.metric("Available staff (Shift 1)", len(day_staff))
+            day_staff = filter_by_day(schedule, day)
+            st.metric("Available staff", len(day_staff))
 
             if len(day_staff) < 6:
                 st.warning(f"Only {len(day_staff)} staff available. Minimum 6 recommended.")
@@ -471,7 +473,7 @@ def main():
         return
 
     if not day_staff:
-        st.warning(f"No shift_1 staff available on {day}.")
+        st.warning(f"No staff available on {day}.")
         return
 
     # Generate button
@@ -484,12 +486,14 @@ def main():
     if generate or regenerate:
         with st.spinner("Generating schedule with AI..."):
             try:
-                result = generate_schedule(day_staff)
+                result, raw_response = generate_schedule(day_staff)
                 if result and "assignments" in result:
                     st.session_state["schedule_result"] = result
                     st.session_state["day_staff"] = day_staff
                 else:
                     st.error("Failed to parse schedule from AI response. Try regenerating.")
+                    with st.expander("Raw LLM response (debug)"):
+                        st.code(raw_response[:3000])
             except Exception as e:
                 st.error(f"Generation failed: {e}")
 
@@ -497,6 +501,7 @@ def main():
     if "schedule_result" in st.session_state:
         result = st.session_state["schedule_result"]
         assignments = result["assignments"]
+        assignments = sorted(assignments, key=lambda a: min(a["tasks"].keys()))
 
         st.subheader(f"Schedule for {day}")
         st.html(build_timeline_html(assignments))

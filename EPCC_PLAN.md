@@ -72,4 +72,68 @@
 
 **Assumptions**: Groq API available, `meta-llama/llama-4-scout-17b-16e-instruct` model accessible, user has `GROQ_API_KEY` set.
 
-**Out of scope**: Shift_2/3, multi-day, drag-and-drop editing, auth, database.
+**Out of scope**: Multi-day, drag-and-drop editing, auth.
+
+---
+
+# Plan: Add Shift 2 & Shift 3 Support
+
+**Created**: 2026-02-17 | **Effort**: ~2h | **Complexity**: Medium
+
+## 1. Objective
+
+**Goal**: Extend schedule generation from shift_1-only to all 3 shifts in a single combined LLM call and display a full-day 07:00-22:00 timeline.
+
+**Why**: The gallery operates across 3 shifts (07:00-15:00, 13:00-21:00, 15:00-23:00). Shift_1-only scheduling left afternoon/evening uncovered.
+
+**Success**:
+- All shifts' staff sent to LLM in one call
+- Timeline grid spans 07:00-22:00 (16 columns)
+- Constraint validation covers full operating hours
+- All 10 tests pass
+
+## 2. Approach
+
+- **Single LLM call**: Send all shifts' staff for the selected day (not just shift_1). The prompt's `EXPECTED_OUTPUT` already updated with shift_2/shift_3 examples.
+- **Extended timeline**: Expand `TIME_SLOTS` from 8 slots (07:00-14:00) to 16 slots (07:00-22:00). Empty cells for hours outside a staff member's shift show the existing hatched pattern.
+- **Dynamic constraint ranges**: Restroom_2 and Restroom_4 validation extended to cover 10:00-22:00 based on actual time slots present in assignments.
+- **Backward compatible**: Egress and BOH constraints keep their original time ranges (shift_1-specific tasks).
+
+**Trade-off**: Dynamic time ranges from `time_map` keys vs hardcoded extended ranges → chose dynamic for robustness (adapts to whatever the LLM outputs).
+
+## 3. Tasks
+
+### Phase 1: Fix prompt.py bugs (~0.5h)
+
+1. **Fix missing comma in EXPECTED_OUTPUT** (5min) — Line 77: `"13:00": "Outside"` missing trailing comma | Deps: None | Risk: Low
+2. **Fix double-encoding of EXPECTED_OUTPUT** (10min) — `json.dumps()` on a string double-encodes. Use string directly in `build_prompt()` | Deps: None | Risk: Low
+3. **Increase max_tokens** (5min) — 2000→4000 for multi-shift responses | Deps: None | Risk: Low
+
+### Phase 2: Update app.py (~1h)
+
+4. **Replace filter_shift1 with filter_by_day** (10min) — Remove shift_name filter, return all staff for selected day | Deps: None | Risk: Low
+5. **Expand TIME_SLOTS** (5min) — 07:00-14:00 → 07:00-22:00 (16 columns) | Deps: None | Risk: Low
+6. **Update sidebar UI labels** (5min) — "Available staff (Shift 1)" → "Available staff", "No shift_1 staff" → "No staff" | Deps: Task 4 | Risk: Low
+7. **Extend constraint validation ranges** (30min) — Restroom_2/Restroom_4: dynamic 10:00-22:00 from time_map. Egress/BOH: unchanged. | Deps: None | Risk: Medium
+
+### Phase 3: Update tests (~0.5h)
+
+8. **Update test imports and filter tests** (15min) — Rename filter_shift1→filter_by_day, expect 3 results for Monday (all shifts) | Deps: Task 4 | Risk: Low
+9. **Add multi-shift staff to VALID_ASSIGNMENTS** (15min) — Add shift_2/shift_3 employees G, H, I with evening time ranges | Deps: Task 7 | Risk: Low
+
+**Total**: ~2h
+
+## 4. Quality Strategy
+
+**Tests**: Update existing 10 tests — no new test count, but expanded coverage for multi-shift data.
+**Validation**: `uv run pytest -v` — all 10 pass. Manual verification via `uv run streamlit run app.py`.
+
+## 5. Risks
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| max_tokens still insufficient for large teams | Medium | Increased to 4000; monitor and bump if needed |
+| LLM struggles with 3-shift complexity | Medium | EXPECTED_OUTPUT provides clear multi-shift example |
+| Timeline grid too wide at 16 columns | Low | Already has overflow-x: auto scrolling |
+
+**Assumptions**: LLM can handle combined 8+ staff across 3 shifts within 4000 tokens.

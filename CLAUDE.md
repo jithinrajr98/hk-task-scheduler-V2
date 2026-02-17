@@ -11,7 +11,7 @@ uv sync
 # Run the app
 uv run streamlit run app.py
 
-# Run all tests (10 tests)
+# Run all tests (11 tests)
 uv run pytest
 
 # Run tests verbose
@@ -24,7 +24,7 @@ uv run pytest tests/test_core.py::test_filter_shift1_correct_day
 ## Environment Variables
 
 Set in `.env` (loaded via python-dotenv):
-- `GROQ_API_KEY` — required, for LLM schedule generation
+- `HF_TOKEN` — required, for HuggingFace LLM inference
 - `SUPABASE_URL` — optional, for persistent storage
 - `SUPABASE_API_KEY` — optional, for persistent storage
 
@@ -34,12 +34,12 @@ For Streamlit Cloud deployment, these go in `.streamlit/secrets.toml` instead.
 
 The app is a Streamlit single-page application that generates housekeeping task schedules for a luxury gallery using an LLM.
 
-**Data flow:** Upload/load staff schedule → filter to shift_1 for selected day → send to Groq LLM → display timeline grid → validate constraints → export CSV.
+**Data flow:** Upload/load staff schedule → filter to shift_1 for selected day → send to HuggingFace LLM (Llama-3.3-70B) → display timeline grid → validate constraints → export CSV.
 
 ### Key Files
 
 - `app.py` — Streamlit UI, file parsing, timeline HTML rendering, constraint validation
-- `prompt.py` — LLM prompt assembly (structured sections: TASK_CONTEXT, TASK_DESCRIPTION, EXAMPLES, CONSTRAINT, etc.) and Groq API calls. Uses `llama-3.3-70b-versatile` at temperature 0.
+- `prompt.py` — LLM prompt assembly (structured sections: TASK_CONTEXT, TASK_DESCRIPTION, EXAMPLES, CONSTRAINT, etc.) and HuggingFace API calls via OpenAI SDK. Uses `meta-llama/Llama-3.3-70B-Instruct` at temperature 0.
 - `supabase_client.py` — Supabase CRUD for `staff_schedule` table (push on upload, load on startup)
 - `data/staff_schedule.json` — bundled fallback schedule data
 
@@ -55,7 +55,7 @@ Each entry: `{ name, day, shift_name, start_time, end_time }`. Shift names: `shi
 
 ### LLM Response Format
 
-The prompt instructs the LLM to wrap JSON in `<response>` tags. `parse_response()` extracts via regex, with a fallback that finds the first `{` to last `}`.
+The prompt instructs the LLM to wrap JSON in `<response>` tags. `parse_response()` strips reasoning blocks (`<think>`, `<scratchpad>`), extracts via regex, with a fallback that finds the first `{` to last `}`.
 
 ### Constraint Validation
 
