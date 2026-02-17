@@ -28,3 +28,31 @@
 **Tests**: `uv run pytest`
 **Ready for**: `/epcc-commit`
 **Blockers**: None
+
+---
+
+# Implementation: LLM Self-Correction via Second Pass (F012)
+
+**Mode**: default | **Date**: 2026-02-17 | **Status**: Complete
+
+## 1. Changes (3 files modified, +~50 lines, 11 tests)
+
+**Modified**: `prompt.py` — Added `CORRECTION_MODEL`, `model` param on `get_completion()`, `build_correction_prompt()`, `correct_schedule()`
+**Modified**: `app.py` — Wired auto-correction into generation flow (lines 486-503)
+**Modified**: `tests/test_core.py` — Added `test_build_correction_prompt_includes_failures`
+
+## 2. Quality
+
+**Tests**: 11/11 passing (10 existing + 1 new). No regressions.
+**Security**: No new attack surface — correction uses same Groq API path as generation.
+
+## 3. Decisions
+
+**Two different models**: Maverick (fast) for generation, 70b-versatile (stronger reasoning) for correction. Correction needs targeted constraint fixes — stronger model justified.
+**Max 1 correction attempt**: No infinite loops. If pass 2 fails, result shown as-is with failure badges.
+**Minimal correction prompt**: Original schedule + failed rules + constraint rules only. Skips full generation prompt.
+
+## 4. Handoff
+
+**Ready for**: `/epcc-commit`
+**Blockers**: None

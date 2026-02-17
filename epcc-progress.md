@@ -2,7 +2,7 @@
 
 **Project**: HK Task Scheduler V2
 **Started**: 2026-02-13
-**Progress**: 7/7 features (100%)
+**Progress**: 12/12 features (100%)
 
 ---
 
@@ -64,5 +64,110 @@ All 7 features implemented and verified via Playwright MCP E2E testing.
 
 ### Next Session
 Run `/epcc-commit` to finalize.
+
+---
+
+## Session 3: Multi-Shift Support - 2026-02-17
+
+### Summary
+Extended schedule generation from shift_1-only to all 3 shifts (shift_1, shift_2, shift_3) in a single combined LLM call with full-day timeline.
+
+### Changes Made
+**prompt.py**:
+- Fixed missing comma in EXPECTED_OUTPUT (line 77)
+- Removed json.dumps() double-encoding of string EXPECTED_OUTPUT in build_prompt()
+- Increased max_tokens from 2000 to 4000
+
+**app.py**:
+- Replaced `filter_shift1()` with `filter_by_day()` — returns all shifts for selected day
+- Expanded TIME_SLOTS from 8 (07:00-14:00) to 16 (07:00-22:00)
+- Updated sidebar labels: "Available staff (Shift 1)" → "Available staff"
+- Extended Restroom_2/Restroom_4 constraint validation to dynamic 10:00-22:00 ranges
+
+**tests/test_core.py**:
+- Renamed filter_shift1 → filter_by_day in imports and tests
+- test_filter_by_day_correct_day now expects 3 results (all shifts)
+- Added shift_2/shift_3 employees (G, H, I) to VALID_ASSIGNMENTS fixture
+
+### Feature Progress
+- F008: Multi-Shift Staff Filtering — completed
+- F009: Full-Day Timeline (07:00-22:00) — completed
+- F010: Multi-Shift Constraint Validation — completed
+- F011: Prompt Bug Fixes for Multi-Shift — completed
+
+### Quality
+- 10/10 tests passing (`uv run pytest -v`)
+
+### Next Session
+Run `/epcc-commit` to finalize multi-shift changes.
+
+---
+
+## Session 4: LLM Self-Correction - 2026-02-17
+
+### Summary
+Added automatic self-correction: when the first LLM pass fails constraint validation, a second pass with llama-3.3-70b-versatile fixes only the violated constraints.
+
+### Changes Made
+**prompt.py**:
+- Added `CORRECTION_MODEL = "llama-3.3-70b-versatile"`
+- Added `model` parameter to `get_completion()` (defaults to MODEL_NAME)
+- Added `build_correction_prompt()` — builds targeted correction prompt with original schedule + failed rules + constraint rules
+- Added `correct_schedule()` — orchestrates correction call using stronger 70b model
+
+**app.py**:
+- Imported `correct_schedule` from prompt
+- After pass 1, runs `validate_constraints()` immediately
+- If any constraint fails, calls `correct_schedule()` with "Correcting schedule..." spinner
+- Max 1 correction attempt — no infinite loops
+
+**tests/test_core.py**:
+- Added `test_build_correction_prompt_includes_failures` — verifies failed rules appear, passing rules don't, original schedule JSON included
+
+### Feature Progress
+- F012: LLM Self-Correction via Second Pass — verified
+
+### Quality
+- 11/11 tests passing (`uv run pytest -v`)
+- No regressions on existing features
+
+### Next Session
+Run `/epcc-commit` to finalize.
+
+---
+
+## Session 5: Switch LLM Provider to HuggingFace - 2026-02-17
+
+### Summary
+Switched LLM inference from Groq to HuggingFace router, simplified codebase by removing correction LLM second pass, and hardened response parsing for reasoning models.
+
+### Changes Made
+**prompt.py** (major refactor):
+- Replaced `groq` SDK with `openai` SDK pointing at HuggingFace router (`https://router.huggingface.co/v1`)
+- Model: `meta-llama/Llama-3.3-70B-Instruct` (user iterated through GLM-5, MiniMax-M2.5, gpt-oss-120b)
+- Env var: `GROQ_API_KEY` → `HF_TOKEN`
+- Removed `CORRECTION_MODEL`, `build_correction_prompt()`, `correct_schedule()` — single-pass generation only
+- Removed `PREFILL` and prefill mechanism — eliminated double `<response>` tag bug
+- Removed `PRECOGNITION` scratchpad instruction — prevented models wasting tokens on reasoning
+- Condensed `TASK_DESCRIPTION` and `CONSTRAINT` prompts for clarity
+- Added `<think>` and `<scratchpad>` stripping in `parse_response()` for reasoning model compatibility
+- `temperature` → 0, `max_tokens` → 20000
+
+**app.py**:
+- Removed `correct_schedule` import and correction spinner block
+- Generation flow simplified: generate → store (no second pass)
+
+**pyproject.toml**:
+- `groq>=1.0.0` → `openai>=1.0.0`
+
+**tests/test_core.py**:
+- Removed `build_correction_prompt` test (function deleted)
+- Added `test_parse_response_with_think_tags` for reasoning model stripping
+
+**CLAUDE.md**:
+- Updated env vars, model references, architecture description
+
+### Quality
+- 11/11 tests passing (`uv run pytest -v`)
 
 ---
