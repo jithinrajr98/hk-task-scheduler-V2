@@ -1,6 +1,7 @@
 import json
 import io
 import os
+import random
 
 import pandas as pd
 import streamlit as st
@@ -486,6 +487,7 @@ def main():
     if generate or regenerate:
         with st.spinner("Generating schedule with AI..."):
             try:
+                random.shuffle(day_staff)
                 result, raw_response = generate_schedule(day_staff)
                 if result and "assignments" in result:
                     st.session_state["schedule_result"] = result
