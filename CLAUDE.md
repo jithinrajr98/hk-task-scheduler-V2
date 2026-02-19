@@ -8,6 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 uv sync
 
+# Install Playwright browser (required for PNG export)
+uv run playwright install chromium
+
 # Run the app
 uv run streamlit run app.py
 
@@ -18,7 +21,7 @@ uv run pytest
 uv run pytest -v
 
 # Run a single test
-uv run pytest tests/test_core.py::test_filter_shift1_correct_day
+uv run pytest tests/test_core.py::test_filter_by_day_correct_day
 ```
 
 ## Environment Variables
@@ -32,14 +35,14 @@ For Streamlit Cloud deployment, these go in `.streamlit/secrets.toml` instead.
 
 ## Architecture
 
-The app is a Streamlit single-page application that generates housekeeping task schedules for a luxury gallery using an LLM.
+Streamlit single-page app that generates housekeeping task schedules for a luxury gallery using an LLM.
 
 **Data flow:** Upload/load staff schedule → filter all shifts for selected day → randomize order → send to HuggingFace LLM (Llama-3.3-70B) → display timeline grid → validate constraints → export CSV/PNG.
 
 ### Key Files
 
-- `app.py` — Streamlit UI, file parsing, timeline HTML rendering, constraint validation
-- `prompt.py` — LLM prompt assembly (structured sections: TASK_CONTEXT, TASK_DESCRIPTION, EXAMPLES, CONSTRAINT, etc.) and HuggingFace API calls via OpenAI SDK. Uses `meta-llama/Llama-3.3-70B-Instruct` at temperature 0.
+- `app.py` — Streamlit UI, file parsing, timeline HTML rendering, constraint validation, CSV/PNG export
+- `prompt.py` — LLM prompt assembly (TASK_CONTEXT, TASK_DESCRIPTION, CONSTRAINT sections) and HuggingFace API calls via OpenAI SDK. Uses `meta-llama/Llama-3.3-70B-Instruct` at temperature 0.8.
 - `supabase_client.py` — Supabase CRUD for `staff_schedule` table (push on upload, load on startup)
 - `data/staff_schedule.json` — bundled fallback schedule data
 
@@ -51,7 +54,7 @@ The app is a Streamlit single-page application that generates housekeeping task 
 
 ### Schedule Data Shape
 
-Each entry: `{ name, day, shift_name, start_time, end_time }`. Shift names: `shift_1` (07:00-15:00), `shift_2` (13:00-21:00), `shift_3` (15:00-23:00). Only shift_1 is used for task generation.
+Each entry: `{ name, day, shift_name, start_time, end_time }`. Shift names: `shift_1` (07:00-15:00), `shift_2` (13:00-21:00), `shift_3` (15:00-23:00). All shifts for the selected day are sent to the LLM in a single call.
 
 ### LLM Response Format
 
@@ -59,7 +62,7 @@ The prompt instructs the LLM to wrap JSON in `<response>` tags. `parse_response(
 
 ### Constraint Validation
 
-`validate_constraints()` checks 6 rules against the generated schedule: no double-booking, Restroom_2/Restroom_4 staffing levels, Egress (exactly 2 at 10:00-11:00), BOH-Breakroom and BOH-Restrooms (exactly 1 at 10:00 and 14:00).
+`validate_constraints()` checks 6 rules: no double-booking, Restroom_2/Restroom_4 staffing levels (dynamic 10:00-22:00 ranges), Egress (exactly 2 at 10:00-12:00), BOH-Breakroom and BOH-Restrooms (exactly 1 at specific hours).
 
 ### Timeline Rendering
 
@@ -71,4 +74,4 @@ Uses Playwright headless Chromium to screenshot the timeline HTML. Writes HTML t
 
 ## Testing
 
-Tests are in `tests/test_core.py` covering: staff filtering, LLM response parsing (with/without tags, malformed), constraint validation, and task color mapping. No mocking of external services — tests exercise pure functions only.
+Tests are in `tests/test_core.py` covering: staff filtering (`filter_by_day`), LLM response parsing (with/without tags, `<think>` stripping, malformed input), constraint validation (double-booking, egress, BOH), and task color mapping. Tests exercise pure functions only — no external service mocking.
