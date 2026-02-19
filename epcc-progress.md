@@ -2,7 +2,7 @@
 
 **Project**: HK Task Scheduler V2
 **Started**: 2026-02-13
-**Progress**: 12/12 features (100%)
+**Progress**: 13/13 features (100%)
 
 ---
 
@@ -169,5 +169,30 @@ Switched LLM inference from Groq to HuggingFace router, simplified codebase by r
 
 ### Quality
 - 11/11 tests passing (`uv run pytest -v`)
+
+---
+
+## Session 6: PNG Export with Playwright - 2026-02-19
+
+### Summary
+Replaced `html2image` PNG export with Playwright headless browser to fix timeline clipping issues. The `html2image` library used a fixed viewport that combined with CSS `max-width: 100%` to clip wide grids. Playwright's `full_page=True` screenshot captures the entire content.
+
+### Changes Made
+**app.py**:
+- Replaced `html2image` import with `playwright.sync_api`
+- PNG export writes timeline HTML to temp file, opens with headless Chromium, takes full_page screenshot
+- Viewport width dynamically set to `len(TIME_SLOTS) * 120 + 300`
+- HTML wrapper removes `max-width` constraint
+
+**pyproject.toml**:
+- Removed `html2image` dependency
+- Added `playwright>=1.58.0`
+
+### Feature Progress
+- F013: PNG Export with Playwright — verified via Playwright MCP (full timeline captured, no clipping)
+
+### Quality
+- 11/11 tests passing (`uv run pytest -v`)
+- Visual verification: PNG screenshot shows all 16 columns (07:00-22:00), all employee rows, legend
 
 ---

@@ -288,10 +288,35 @@
       ],
       "source": "EPCC_PLAN.md"
     }
+    {
+      "id": "F013",
+      "name": "PNG Export with Playwright",
+      "description": "Export timeline grid as PNG screenshot using Playwright headless browser with full_page=True to avoid clipping",
+      "priority": "P1",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2026-02-19T00:00:00Z",
+      "implementationOrder": 13,
+      "dependencies": ["F004"],
+      "estimatedHours": 1,
+      "planReference": "EPCC_PLAN.md#plan-png-export-with-playwright",
+      "acceptanceCriteria": [
+        "Download PNG button available after schedule generation",
+        "PNG captures full timeline (07:00-22:00) with no clipping",
+        "File named {day}_Schedule.png (e.g., Monday_Schedule.png)",
+        "All employee rows, legend, and time headers visible in PNG"
+      ],
+      "subtasks": [
+        {"name": "Replace html2image with Playwright sync API", "status": "completed", "estimatedHours": 0.5},
+        {"name": "Update pyproject.toml dependencies", "status": "completed", "estimatedHours": 0.1},
+        {"name": "Verify PNG via Playwright MCP", "status": "completed", "estimatedHours": 0.3}
+      ],
+      "source": "EPCC_PLAN.md"
+    }
   ],
   "metrics": {
-    "total": 12,
-    "verified": 8,
+    "total": 13,
+    "verified": 9,
     "completed": 4,
     "inProgress": 0,
     "pending": 0,

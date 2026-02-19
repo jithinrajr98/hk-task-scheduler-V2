@@ -2,6 +2,7 @@ import json
 import io
 import os
 import random
+import tempfile
 
 import pandas as pd
 import streamlit as st
@@ -518,13 +519,41 @@ def main():
                 st.markdown(f"{icon} **{v['rule']}**")
 
         # Export
+        col_csv, col_png = st.columns(2)
         csv_data = assignments_to_csv(assignments)
-        st.download_button(
-            "Download CSV",
-            data=csv_data,
-            file_name=f"schedule_{day.lower()}.csv",
-            mime="text/csv",
-        )
+        with col_csv:
+            st.download_button(
+                "Download CSV",
+                data=csv_data,
+                file_name=f"schedule_{day.lower()}.csv",
+                mime="text/csv",
+            )
+        with col_png:
+            try:
+                from playwright.sync_api import sync_playwright
+                png_filename = f"{day}_Schedule.png"
+                timeline_html = build_timeline_html(assignments)
+                # Wrap in full HTML doc without max-width constraint
+                full_html = f"<html><body style='margin:0;padding:16px;background:#fff;'>{timeline_html}</body></html>"
+                html_path = os.path.join(tempfile.gettempdir(), "schedule_tmp.html")
+                with open(html_path, "w") as f:
+                    f.write(full_html)
+                viewport_w = len(TIME_SLOTS) * 120 + 300
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True)
+                    page = browser.new_page(viewport={"width": viewport_w, "height": 800})
+                    page.goto(f"file://{html_path}")
+                    page.wait_for_timeout(500)
+                    png_bytes = page.screenshot(full_page=True)
+                    browser.close()
+                st.download_button(
+                    "Download PNG",
+                    data=png_bytes,
+                    file_name=png_filename,
+                    mime="image/png",
+                )
+            except Exception as e:
+                st.warning(f"PNG export unavailable: {e}")
 
 
 if __name__ == "__main__":
