@@ -34,7 +34,7 @@ For Streamlit Cloud deployment, these go in `.streamlit/secrets.toml` instead.
 
 The app is a Streamlit single-page application that generates housekeeping task schedules for a luxury gallery using an LLM.
 
-**Data flow:** Upload/load staff schedule → filter to shift_1 for selected day → send to HuggingFace LLM (Llama-3.3-70B) → display timeline grid → validate constraints → export CSV.
+**Data flow:** Upload/load staff schedule → filter all shifts for selected day → randomize order → send to HuggingFace LLM (Llama-3.3-70B) → display timeline grid → validate constraints → export CSV/PNG.
 
 ### Key Files
 
@@ -63,7 +63,11 @@ The prompt instructs the LLM to wrap JSON in `<response>` tags. `parse_response(
 
 ### Timeline Rendering
 
-`build_timeline_html()` produces a self-contained HTML/CSS grid with color-coded task blocks (TASK_COLORS dict), rendered via `st.html()`. Columns are hourly slots 07:00-14:00.
+`build_timeline_html()` produces a self-contained HTML/CSS grid with color-coded task blocks (TASK_COLORS dict), rendered via `st.html()`. Columns are hourly slots 07:00-22:00.
+
+### PNG Export
+
+Uses Playwright headless Chromium to screenshot the timeline HTML. Writes HTML to temp file, opens with wide viewport (`len(TIME_SLOTS) * 120 + 300`), takes `full_page=True` screenshot. File named `{day}_Schedule.png`.
 
 ## Testing
 

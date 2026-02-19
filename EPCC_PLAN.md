@@ -137,3 +137,35 @@
 | Timeline grid too wide at 16 columns | Low | Already has overflow-x: auto scrolling |
 
 **Assumptions**: LLM can handle combined 8+ staff across 3 shifts within 4000 tokens.
+
+---
+
+# Plan: PNG Export with Playwright
+
+**Created**: 2026-02-19 | **Effort**: ~1h | **Complexity**: Low
+
+## 1. Objective
+
+**Goal**: Export the timeline grid as a PNG screenshot using Playwright headless browser.
+
+**Why**: Previous `html2image` library had viewport clipping issues — CSS `max-width: 100%` constrained content to fixed viewport, cutting off columns on wide grids (16 time slots).
+
+**Success**: Full timeline PNG captured with all columns (07:00-22:00), all employee rows, legend, and no clipping.
+
+## 2. Approach
+
+- **Playwright sync API**: Write timeline HTML to temp file, open with headless Chromium, take `full_page=True` screenshot
+- **Wide viewport**: Set viewport width to `len(TIME_SLOTS) * 120 + 300` to ensure no CSS wrapping
+- **No max-width constraint**: Wrap HTML in `<body style='margin:0;padding:16px'>` without the grid's `max-width: 100%` constraint
+- **File naming**: `{day}_Schedule.png` (e.g., `Monday_Schedule.png`)
+
+## 3. Tasks
+
+1. **Replace html2image with Playwright** (30min) — Swap import, write HTML to temp file, use sync_playwright for screenshot
+2. **Update dependencies** (10min) — Remove html2image, add playwright, install Chromium
+3. **Verify via Playwright MCP** (20min) — Run app, generate schedule, verify PNG captures full timeline
+
+## 4. Quality Strategy
+
+**Tests**: 11/11 existing tests pass (PNG export tested manually via Playwright MCP).
+**Visual verification**: Screenshot inspected — all 16 columns, all rows, legend visible.

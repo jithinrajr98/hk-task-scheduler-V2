@@ -24,33 +24,35 @@
 
 ## 4. Handoff
 
-**Run**: `GROQ_API_KEY=your_key uv run streamlit run app.py`
+**Run**: `HF_TOKEN=your_key uv run streamlit run app.py`
 **Tests**: `uv run pytest`
 **Ready for**: `/epcc-commit`
 **Blockers**: None
 
 ---
 
-# Implementation: LLM Self-Correction via Second Pass (F012)
+# Implementation: LLM Provider Migration + PNG Export
 
-**Mode**: default | **Date**: 2026-02-17 | **Status**: Complete
+**Mode**: default | **Date**: 2026-02-17 to 2026-02-19 | **Status**: Complete
 
-## 1. Changes (3 files modified, +~50 lines, 11 tests)
+## 1. Changes (4 files modified, +~120 lines, 11 tests)
 
-**Modified**: `prompt.py` — Added `CORRECTION_MODEL`, `model` param on `get_completion()`, `build_correction_prompt()`, `correct_schedule()`
-**Modified**: `app.py` — Wired auto-correction into generation flow (lines 486-503)
-**Modified**: `tests/test_core.py` — Added `test_build_correction_prompt_includes_failures`
+**Modified**: `prompt.py` — Switched from Groq to HuggingFace router (OpenAI SDK), removed correction LLM, removed PREFILL/PRECOGNITION, added `<think>`/`<scratchpad>` stripping. Model: `meta-llama/Llama-3.3-70B-Instruct`.
+**Modified**: `app.py` — Removed correction flow, added `random.shuffle()` for staff order, replaced `html2image` PNG export with Playwright headless browser for full-page screenshot.
+**Modified**: `pyproject.toml` — `groq` → `openai`, `html2image` → `playwright`
+**Modified**: `tests/test_core.py` — Removed correction test, added `test_parse_response_with_think_tags`
 
 ## 2. Quality
 
-**Tests**: 11/11 passing (10 existing + 1 new). No regressions.
-**Security**: No new attack surface — correction uses same Groq API path as generation.
+**Tests**: 11/11 passing. No regressions.
+**PNG Export**: Verified via Playwright MCP — full timeline captured (07:00-22:00, all rows, legend) with no clipping.
 
 ## 3. Decisions
 
-**Two different models**: Maverick (fast) for generation, 70b-versatile (stronger reasoning) for correction. Correction needs targeted constraint fixes — stronger model justified.
-**Max 1 correction attempt**: No infinite loops. If pass 2 fails, result shown as-is with failure badges.
-**Minimal correction prompt**: Original schedule + failed rules + constraint rules only. Skips full generation prompt.
+**HuggingFace over Groq**: User preference for HuggingFace inference router with broader model access.
+**Single-pass generation**: Removed correction LLM second pass — simplifies codebase, single model only.
+**Playwright over html2image**: `html2image` had viewport clipping issues with CSS `max-width: 100%`. Playwright's `full_page=True` screenshot captures complete content regardless of viewport.
+**Staff randomization**: `random.shuffle()` before LLM call prevents positional bias in assignments.
 
 ## 4. Handoff
 
